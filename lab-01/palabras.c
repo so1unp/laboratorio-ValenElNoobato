@@ -5,9 +5,9 @@ int main(int argc, char *argv[])
 {
     // Agregar código aquí.
     int c;
-    while((c = getchar()) != EOF && c != "^C") {
-    	if(c == " "){
-            printf("%c\n", c);
+    while((c = getchar()) != "^C") {
+    	if(c == ' '){
+            printf("\n");
  	} else {
 	    printf("%c", c);
 	}        
