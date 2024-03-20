@@ -1,0 +1,38 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+int main(int argc, char *argv[])
+{
+    // Agregar código aquí.
+    int i = 0, j = 0, c = 0, aux1 = 0;
+    int MAXIMO_TAMANO = 5;
+    int cont[MAXIMO_TAMANO];
+    while((c = getchar()) != EOF) {
+	if(c != ' ' && c != '\n'){
+	    i++;
+	} else {
+	    cont[j] = i;
+	    j++;
+	    i = 0;
+	}
+    }
+
+    //Un for para simplemente para sacar la palabra con mas letras
+
+    for(i = 0; i < MAXIMO_TAMANO; i++){
+	if (aux < cont[i]){ aux = cont[i] }
+    }
+
+    for(i = 1; i <= aux; i++){
+	printf(i," ");
+
+	for(j = 0; j < MAXIMO_TAMANO; j++){
+	    if(cont[j] == i){
+		
+	    }
+	}
+    }
+
+    // Termina la ejecución del programa.
+    exit(EXIT_SUCCESS);
+}
