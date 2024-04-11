@@ -1,7 +1,26 @@
-#include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <string.h>
 
-int main(int argc, char *argv[])
+void sighandler(int sig) {
+	printf("%s\n", strsignal(sig));
+}
+
+void set() {
+	int i;
+	for(i = 1; i <= 31; i++) {
+		signal(i, sighandler);
+		//sigaction(i, sighandler, NULL);
+	}
+}
+
+int	main(void)
 {
-    exit(EXIT_SUCCESS);
+	set();
+
+	while(1) {
+		pause();
+	}
 }
