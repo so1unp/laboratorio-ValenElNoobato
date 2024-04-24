@@ -7,6 +7,10 @@
 void test_fork(int count);
 void test_thread(int count);
 
+void *threadHandler(void *p) {
+    pthread_exit(NULL);
+}
+
 int main(int argc, char *argv[]) 
 {
     int modo, count;
@@ -76,10 +80,19 @@ void test_fork(int count)
 
 void test_thread(int count) 
 {
-    int j;
+    int j, number;
     
     for (j = 0; j < count; j++) {
         // COMPLETAR: CREAR UN HILO
+        pthread_t id;
+
+        number = pthread_create(&id, NULL, threadHandler, NULL);
+
         // COMPLETAR: ESPERAR POR HILO RECIEN CREADO
+        if (number != 0) {
+            perror("thread");
+        }
+
+        pthread_join(id, NULL);
     }
 }
