@@ -10,6 +10,12 @@
 #include <math.h>
 #include <semaphore.h>
 
+//WAIT = DOWN | POST = UP
+
+pthread_mutex_t mutex;
+sem_t lleno;
+sem_t vacio;
+
 static void* producer(void*);
 static void* consumer(void*);
 
@@ -33,11 +39,14 @@ static void* producer(void *p)
     struct params *params = (struct params*) p;
 
     for (i = 0; i < params->items; i++) {
+        sem_wait(&vacio);
+        pthread_mutex_lock(&mutex);
         params->buf->buf[i % params->buf->size] = i;
+        pthread_mutex_unlock(&mutex);
+        sem_post(&lleno);
         // Espera una cantidad aleatoria de microsegundos.
         usleep(rand() % params->wait_prod);
     }
-
     pthread_exit(0);
 }
 
@@ -52,7 +61,11 @@ static void* consumer(void *p)
     int *reader_results = (int*) malloc(sizeof(int)*params->items);
 
     for (i = 0; i < params->items; i++) {
+        sem_wait(&lleno);
+        pthread_mutex_lock(&mutex);
         reader_results[i] = params->buf->buf[i % params->buf->size];
+        pthread_mutex_unlock(&mutex);
+        sem_post(&vacio);
         // Espera una cantidad aleatoria de microsegundos.
         usleep(rand() % params->wait_prod);
     }
@@ -130,6 +143,10 @@ int main(int argc, char** argv)
         exit(EXIT_FAILURE);
     }
 
+    pthread_mutex_init(&mutex, NULL);
+    sem_init(&lleno, 0, 0);
+    sem_init(&vacio, 0, buf->size);
+
     // Inicializa semilla para números pseudo-aleatorios.
     srand(getpid());
 
@@ -138,5 +155,8 @@ int main(int argc, char** argv)
     pthread_create(&consumer_t, NULL, consumer, params);
 
     // Mi trabajo ya esta hecho ...
+    pthread_mutex_destroy(&mutex);
+    sem_destroy(&lleno);
+    sem_destroy(&vacio);
     pthread_exit(NULL);
 }
