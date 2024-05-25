@@ -157,7 +157,7 @@ int main(int argc, char *argv[])
             modify_canvas(argv[2], argv[3], atoi(argv[4]), atoi(argv[5]), argv[6][0]);
             break;
         case 'p':
-            if (argc < 3) {
+            if (argc != 3) {
                 usage(argv);
                 exit(EXIT_FAILURE);
             }
