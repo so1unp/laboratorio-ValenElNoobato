@@ -50,6 +50,48 @@ void create_process(int pid) {
     processes[pid] = process;
 }
 
+void write_all() {
+    int i, j;
+    printf("\n");
+    // Se leen todos los procesos creados
+    for (i = 0; i < MAX_PROCESS; i++) {
+        if (processes[i].created == true) {
+            process_t process = processes[i];
+            printf("Proceso %d: ", process.pid);
+            for(j = 0; j < TAM_PROCESS; j++) {
+                if (process.page[j] == -1) {
+                    printf("- ");
+                } else {
+                    printf("%d ", process.page[j]);
+                }
+            }
+            printf("\n");
+        }
+    }
+
+    // Se lee la memoria principal
+    printf("Memoria fisica: ");
+    for (i = 0; i < TAM_PRIMARY; i++) {
+        if(primary[i].process == -1) {
+            printf("- ");
+        } else {
+            printf("%d.%d ", primary[i].process, primary[i].page);
+        }
+    }
+    printf("\n");
+
+    // Se lee la memoria secundaria
+    printf("Memoria secundaria: ");
+    for (i = 0; i < TAM_SECONDARY; i++) {
+        if(secondary[i].process == -1) {
+            printf("- ");
+        } else {
+            printf("%d.%d ", secondary[i].process, secondary[i].page);
+        }
+    }
+    printf("\n");
+}
+
 void modify_process(int pid, int page, char option) {
     int i;
     bool pass = false;
@@ -145,49 +187,12 @@ void modify_process(int pid, int page, char option) {
         }
         process.page[page - 1] = pid_memory;
         processes[pid] = process;
-    }  
-}
-
-void write_all() {
-    int i, j;
-    printf("\n");
-    // Se leen todos los procesos creados
-    for (i = 0; i < MAX_PROCESS; i++) {
-        if (processes[i].created == true) {
-            process_t process = processes[i];
-            printf("Proceso %d: ", process.pid);
-            for(j = 0; j < TAM_PROCESS; j++) {
-                if (process.page[j] == -1) {
-                    printf("- ");
-                } else {
-                    printf("%d ", process.page[j]);
-                }
-            }
-            printf("\n");
-        }
     }
 
-    // Se lee la memoria principal
-    printf("Memoria fisica: ");
-    for (i = 0; i < TAM_PRIMARY; i++) {
-        if(primary[i].process == -1) {
-            printf("- ");
-        } else {
-            printf("%d.%d ", primary[i].process, primary[i].page);
-        }
+    if (secondary[TAM_SECONDARY - 1].process != -1) {
+        write_all();
+        exit(0);
     }
-    printf("\n");
-
-    // Se lee la memoria secundaria
-    printf("Memoria secundaria: ");
-    for (i = 0; i < TAM_SECONDARY; i++) {
-        if(secondary[i].process == -1) {
-            printf("- ");
-        } else {
-            printf("%d.%d ", secondary[i].process, secondary[i].page);
-        }
-    }
-    printf("\n");
 }
 
 void handle_sigint(int sig) {
