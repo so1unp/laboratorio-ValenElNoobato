@@ -7,6 +7,7 @@
 #define TAM_PROCESS 16
 #define TAM_PRIMARY 8
 #define TAM_SECONDARY 16
+#define NUM_MAX 1000
 
 struct process {
     int pid;
@@ -96,8 +97,7 @@ void modify_process(int pid, int page, char option) {
     int i;
     bool pass = false;
     bool swap = true;
-    int pid_memory;
-    process_t process = processes[pid];
+    bool between = false;
 
     // Se corrobora si el proceso ya esta en la memoria principal.
     for(i = 0; i < TAM_PRIMARY; i++) {
@@ -105,17 +105,28 @@ void modify_process(int pid, int page, char option) {
             pass = true;
             primary[i].LRU = cont_LRU;
             cont_LRU++;
+            break;
         }
     }
 
-    // Si el proceso ya se encuentra no se lo ingresa, en caso contrario, ingresa el proceso en la memoria principal.
-    if (pass == false) {
+    // Se corrobora si el proceso que se esta llamando esta en la memoria secundaria.
+    for(i = 0; i < TAM_SECONDARY; i++) {
+        if(secondary[i].process == pid && secondary[i].page == page) {
+            between = true;
+            break;
+        }
+    }
+
+    // Si el proceso ya se encuentra en la memoria principal no se lo ingresa, en caso contrario, ingresa el proceso en la memoria principal.
+    if (pass == false && between == false) {
         for(i = 0; i < TAM_PRIMARY; i++) {
             if (primary[i].process == -1) {
                 primary[i].process = pid;
                 primary[i].page = page;
-                pid_memory = i;
+                // Se coloca en la pagina del proceso la direccion a memoria principal.
+                processes[primary[i].process].page[primary[i].page - 1] = i;
                 swap = false;
+                // Los contadores de FIFO y LRU incrementan ya que en caso de que haya espacio en la memoria principal ambos dan el caso de que se incrementan.
                 primary[i].FIFO = cont_FIFO;
                 cont_FIFO++;
                 primary[i].LRU = cont_LRU;
@@ -128,7 +139,7 @@ void modify_process(int pid, int page, char option) {
             memory_t rem_memory;
             if (option == 'f') {
                 // Se busca al proceso con el contador FIFO mas pequeño, para remplazarlo en la memoria secundaria.
-                int cont = TAM_PRIMARY;
+                int cont = NUM_MAX;
                 for (i = 0; i < TAM_PRIMARY; i++) {
                     if (primary[i].FIFO < cont) {
                         cont = primary[i].FIFO;
@@ -142,22 +153,26 @@ void modify_process(int pid, int page, char option) {
                         primary[i].page = page;
                         primary[i].FIFO = cont_FIFO;
                         cont_FIFO++;
+                        // Se coloca en la pagina del proceso la direccion a memoria principal.
+                        processes[primary[i].process].page[primary[i].page - 1] = i;
                         break;
                     }
                 }
+                // Se busca sitio en la memoria secundaria y se asigna el proceso el "mas viejo"
                 for (i = 0; i < TAM_SECONDARY; i++) {
                     if (secondary[i].process == -1) {
                         secondary[i].process = rem_memory.process;
                         secondary[i].page = rem_memory.page;
                         secondary[i].FIFO = rem_memory.FIFO;
-                        pid_memory = i;
+                        // Se reemplaza en la pagina del proceso la direccion correcta a donde deberia de apuntar ahora.
+                        processes[secondary[i].process].page[secondary[i].page - 1] = i;
                         break;
                     }
                 }
             }
             if (option == 'l') {
                 // Se busca al proceso con el contador LRU mas pequeño, para remplazarlo en la memoria secundaria.
-                int cont = TAM_PRIMARY;
+                int cont = NUM_MAX;
                 for (i = 0; i < TAM_PRIMARY; i++) {
                     if (primary[i].LRU < cont) {
                         cont = primary[i].LRU;
@@ -171,24 +186,100 @@ void modify_process(int pid, int page, char option) {
                         primary[i].page = page;
                         primary[i].LRU = cont_LRU;
                         cont_LRU++;
+                        // Se coloca en la pagina del proceso la direccion a memoria principal.
+                        processes[primary[i].process].page[primary[i].page - 1] = i;
                         break;
                     }
                 }
+                // Se busca sitio en la memoria secundaria y se asigna el proceso el "mas viejo"
                 for (i = 0; i < TAM_SECONDARY; i++) {
                     if (secondary[i].process == -1) {
                         secondary[i].process = rem_memory.process;
                         secondary[i].page = rem_memory.page;
                         secondary[i].LRU = rem_memory.LRU;
-                        pid_memory = i;
+                        // Se reemplaza en la pagina del proceso la direccion correcta a donde deberia de apuntar ahora.
+                        processes[secondary[i].process].page[secondary[i].page - 1] = i;
                         break;
                     }
                 }
             }
         }
-        process.page[page - 1] = pid_memory;
-        processes[pid] = process;
     }
-
+    // Si el proceso se encuentra en la memoria secundaria, entonces hay que remplazarlo en la memoria principal segun el tipo de algoritmo.
+    if (between == true) {
+        memory_t rem_memory_p;
+        memory_t rem_memory_s;
+        if (option == 'f') {
+            // Se busca al proceso con el contador FIFO mas pequeño, para remplazarlo en la memoria secundaria.
+            int cont = NUM_MAX;
+            for (i = 0; i < TAM_PRIMARY; i++) {
+                if (primary[i].FIFO < cont) {
+                    cont = primary[i].FIFO;
+                    rem_memory_p = primary[i];
+                }
+            }
+            // Se busca el proceso que esta en la memoria secundaria.
+            for (i = 0; i < TAM_SECONDARY; i++) {
+                if(secondary[i].process == pid && secondary[i].page == page) {
+                    rem_memory_s = secondary[i];
+                    // Se reemplaza el proceso de la memoria secundaria por el de la memoria principal.
+                    secondary[i].process = rem_memory_p.process;
+                    secondary[i].page = rem_memory_p.page;
+                    secondary[i].FIFO = rem_memory_p.FIFO;
+                    // Se reemplaza la pagina del proceso para que apunte al lugar indicado de la memoria secundaria.
+                    processes[rem_memory_p.process].page[rem_memory_p.page - 1] = i;
+                    break;
+                }
+            }
+            // Se reemplaza en la memoria principal el proceso de la memoria secundaria.
+            for (i = 0; i < TAM_PRIMARY; i++) {
+                if (primary[i].FIFO == cont) {
+                    primary[i].process = rem_memory_s.process;
+                    primary[i].page = rem_memory_s.page;
+                    primary[i].FIFO = cont_FIFO;
+                    cont_FIFO++;
+                    // Se reemplaza la pagina del proceso para que apunte al lugar indicado de la memoria principal.
+                    processes[rem_memory_s.process].page[rem_memory_s.page - 1] = i;
+                    break;
+                }
+            }       
+        }
+        if (option == 'l') {
+            // Se busca al proceso con el contador FIFO mas pequeño, para remplazarlo en la memoria secundaria.
+            int cont = NUM_MAX;
+            for (i = 0; i < TAM_PRIMARY; i++) {
+                if (primary[i].LRU < cont) {
+                    cont = primary[i].LRU;
+                    rem_memory_p = primary[i];
+                }
+            }
+            // Se busca el proceso que esta en la memoria secundaria.
+            for (i = 0; i < TAM_SECONDARY; i++) {
+                if(secondary[i].process == pid && secondary[i].page == page) {
+                    rem_memory_s = secondary[i];
+                    // Se reemplaza el proceso de la memoria secundaria por el de la memoria principal.
+                    secondary[i].process = rem_memory_p.process;
+                    secondary[i].page = rem_memory_p.page;
+                    secondary[i].LRU = rem_memory_p.LRU;
+                    // Se reemplaza la pagina del proceso para que apunte al lugar indicado de la memoria secundaria.
+                    processes[rem_memory_p.process].page[rem_memory_p.page - 1] = i;
+                    break;
+                }
+            }
+            // Se reemplaza en la memoria principal el proceso de la memoria secundaria.
+            for (i = 0; i < TAM_PRIMARY; i++) {
+                if (primary[i].LRU == cont) {
+                    primary[i].process = rem_memory_s.process;
+                    primary[i].page = rem_memory_s.page;
+                    primary[i].LRU = cont_LRU;
+                    cont_LRU++;
+                    // Se reemplaza la pagina del proceso para que apunte al lugar indicado de la memoria principal.
+                    processes[rem_memory_s.process].page[rem_memory_s.page - 1] = i;
+                    break;
+                }
+            }   
+        }
+    }
     if (secondary[TAM_SECONDARY - 1].process != -1) {
         write_all();
         exit(0);
