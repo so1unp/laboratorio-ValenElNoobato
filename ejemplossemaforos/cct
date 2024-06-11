@@ -1,0 +1,6 @@
+#
+# script para compilar con lpthread
+#
+# uso: cct programa
+gcc $1.c -o $1 -lpthread
+
